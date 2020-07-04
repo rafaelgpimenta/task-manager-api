@@ -1,0 +1,97 @@
+const Task = require('../models/task');
+
+const create = async (req, res) => {
+  const task = new Task({
+    ...req.body,
+    owner: req.user._id,
+  });
+
+  try {
+    await task.save();
+    res.status(201).send(task);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+}
+
+const index = async (req, res) => {
+  const match = {}, sort = {};
+
+  if (req.query.completed) {
+    match.completed = req.query.completed === 'true'
+  }
+
+  if (req.query.sortBy) {
+    const [attr, order] = req.query.sortBy.split(':');
+    sort[attr] = order === 'asc' ? 1 : -1;
+  }
+
+  try {
+    // const tasks = await Task.find({ owner: req.user._id });
+    // res.send(tasks);
+    await req.user.populate({
+      match,
+      options: {
+        limit: parseInt(req.query.limit),
+        skip: parseInt(req.query.skip),
+        sort,
+      },
+      path: 'tasks',
+    }).execPopulate();
+    res.send(req.user.tasks);
+  } catch (error) {
+    res.status(500).send();
+  }
+}
+
+const update = async (req, res) => {
+  const updates = Object.keys(req.body);
+  const allowedUpdate = ['description', 'completed'];
+  const isValidOperation = updates.every(attr => allowedUpdate.includes(attr));
+
+  if (!isValidOperation) {
+    return res.status(400).send({ error: 'Invalid updates!' });
+  }
+
+  try {
+    const _id = req.params.id;
+    const task = await Task.findOne({ _id, owner: req.user._id });
+    // const task = await Task.findByIdAndUpdate(_id, req.body, {
+    //   new: true,
+    //   runValidators: true,
+    // });
+    if (!task) return res.status(404).send();
+
+    for (const attr of updates) task[attr] = req.body[attr];
+    await task.save();
+    res.send(task);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+}
+
+const show = async (req, res) => {
+  try {
+    const _id = req.params.id;
+    const task = await Task.findOne({ _id, owner: req.user._id });
+    if (!task) return res.status(404).send();
+
+    res.send(task);
+  } catch (error) {
+    res.status(500).send();
+  }
+}
+
+const destroy = async (req, res) => {
+  try {
+    const _id = req.params.id;
+    const task = await Task.findOneAndDelete({ _id, owner: req.user._id });
+    if (!task) return res.status(404).send();
+
+    res.send(task);
+  } catch (error) {
+    res.status(500).send();
+  }
+}
+
+module.exports = { create, index, update, show, destroy }
