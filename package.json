@@ -6,10 +6,11 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "env-cmd -f ./config/dev.env nodemon src/index.js",
-    "test": "env-cmd -f ./config/test.env jest"
+    "test": "env-cmd -f ./config/test.env jest --runInBand --coverage"
   },
   "jest": {
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["./tests/setupTests.js"]
   },
   "keywords": [],
   "author": "",
